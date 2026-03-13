@@ -1,12 +1,11 @@
 pipeline {
-//     agent {
-//         label "jenkins-agent"
-//     }
     agent any
+
     tools {
         jdk 'Java21'
         maven 'Maven3'
     }
+
     environment {
         APP_NAME = "project-initiation-service"
         RELEASE = "1.0.0"
@@ -14,9 +13,9 @@ pipeline {
         IMAGE_NAME = "${DOCKERHUB_USER}/${APP_NAME}"
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
 
-        // Add this for clarity
         KUBECONFIG_CREDENTIAL_ID = 'minikube-kubeconfig'
     }
+
     stages {
         stage('Cleanup Workspace') {
             steps {
@@ -27,26 +26,27 @@ pipeline {
 
         stage('Checkout SCM') {
             steps {
-                echo "Checking out ${APP_NAME} module from Git repository..."
+                echo "Checking out project-initiation-service from Git repository..."
                 git branch: 'main', credentialsId: 'github', url: 'https://github.com/Awe360/project-initiation-service.git'
             }
         }
 
         stage('Build Module') {
             steps {
-                echo "Building the ${APP_NAME} module..."
-                dir("${APP_NAME}") {
-                    sh "mvn clean package -DskipTests"
-                }
+                echo "Building the project-initiation-service module..."
+
+                // Quick debug (remove after first successful run)
+                sh 'pwd && ls -la'
+                sh 'find . -name pom.xml || echo "pom.xml not found!"'
+
+                sh "mvn clean package -DskipTests"
             }
         }
 
         stage('Test Module') {
             steps {
-                echo "Running tests for ${APP_NAME}..."
-                dir("${APP_NAME}") {
-                    sh "mvn test"
-                }
+                echo "Running tests for project-initiation-service..."
+                sh "mvn test"
             }
         }
 
@@ -54,11 +54,9 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    echo "Performing SonarQube analysis on ${APP_NAME}..."
+                    echo "Performing SonarQube analysis on project-initiation-service..."
                     withSonarQubeEnv('sonarqube-server') {
-                        dir("${APP_NAME}") {
-                            sh "mvn sonar:sonar"
-                        }
+                        sh "mvn sonar:sonar"
                     }
                 }
             }
@@ -67,24 +65,24 @@ pipeline {
 
         stage('Build & Push Docker Image') {
             steps {
-                dir("${APP_NAME}") {
-                    echo "Building and pushing Docker images (tag: ${IMAGE_TAG} and latest) for ${APP_NAME} using Jib..."
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub',
-                                    usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKERHUB_TOKEN')]) {
-                        sh """
-                        mvn clean compile jib:build \
-                            -Dimage=${IMAGE_NAME}:${IMAGE_TAG} \
-                            -Djib.to.auth.username=${DOCKERHUB_USER} \
-                            -Djib.to.auth.password=${DOCKERHUB_TOKEN}
-                        """
+                echo "Building and pushing Docker images (tag: ${IMAGE_TAG} and latest) using Jib..."
 
-                        sh """
-                            mvn compile jib:build \
-                                -Dimage=${IMAGE_NAME}:latest \
-                                -Djib.to.auth.username=${DOCKERHUB_USER} \
-                                -Djib.to.auth.password=${DOCKERHUB_TOKEN}
-                        """
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub',
+                                usernameVariable: 'DOCKER_USER',
+                                passwordVariable: 'DOCKERHUB_TOKEN')]) {
+                    sh """
+                    mvn clean compile jib:build \
+                        -Dimage=${IMAGE_NAME}:${IMAGE_TAG} \
+                        -Djib.to.auth.username=${DOCKER_USER} \
+                        -Djib.to.auth.password=${DOCKERHUB_TOKEN}
+                    """
+
+                    sh """
+                    mvn compile jib:build \
+                        -Dimage=${IMAGE_NAME}:latest \
+                        -Djib.to.auth.username=${DOCKER_USER} \
+                        -Djib.to.auth.password=${DOCKERHUB_TOKEN}
+                    """
                 }
             }
         }
@@ -99,12 +97,12 @@ pipeline {
                         aquasec/trivy image ${IMAGE_NAME}:latest \
                         --no-progress --scanners vuln \
                         --exit-code 0 --severity HIGH,CRITICAL \
-                        --format table > trivy-scan-results-${APP_NAME}.txt
+                        --format table > trivy-scan-results.txt
                     """
 
-                    archiveArtifacts artifacts: "trivy-scan-results-${APP_NAME}.txt", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "trivy-scan-results.txt", allowEmptyArchive: true
                     echo "Trivy Scan Results:"
-                    sh "cat trivy-scan-results-${APP_NAME}.txt"
+                    sh "cat trivy-scan-results.txt"
                 }
             }
         }
@@ -114,35 +112,26 @@ pipeline {
             steps {
                 echo "Deploying ${APP_NAME} to local Minikube cluster..."
 
-                // Option 1: Recommended - use Kubernetes CLI plugin (install if not present: Manage Plugins → Kubernetes CLI)
-                // withKubeConfig([credentialsId: env.KUBECONFIG_CREDENTIAL_ID, serverUrl: '']) {
-                //     sh "kubectl apply -f deployment/k8s/apps/${APP_NAME}.yaml"
-                //     sh "kubectl rollout restart deployment/${APP_NAME}"
-                //     sh "kubectl rollout status deployment/${APP_NAME} --timeout=120s"
-                // }
-
-                // Option 2: Manual way (works without plugin)
                 withCredentials([file(credentialsId: env.KUBECONFIG_CREDENTIAL_ID, variable: 'KUBECONFIG_FILE')]) {
-                    // Optional: install kubectl if missing in agent
+                    // Install kubectl if missing
                     sh '''
                         if ! command -v kubectl &> /dev/null; then
                             echo "Installing kubectl..."
                             curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
                             chmod +x kubectl
-                            mv kubectl /usr/local/bin/
+                            mv kubectl /usr/local/bin/ || sudo mv kubectl /usr/local/bin/
                         fi
                     '''
 
-                    script {
-                        // Use the mounted kubeconfig
-                        sh '''
-                            export KUBECONFIG=${KUBECONFIG_FILE}
-                            kubectl get nodes  # quick test connection
-                            kubectl apply -f deployment/k8s/apps/${APP_NAME}.yaml
-                            kubectl rollout restart deployment ${APP_NAME}
-                            kubectl rollout status deployment ${APP_NAME} --timeout=120s
-                        '''
-                    }
+                    sh '''
+                        export KUBECONFIG=${KUBECONFIG_FILE}
+                        echo "Testing Kubernetes connection..."
+                        kubectl get nodes || echo "Kubernetes connection failed - check kubeconfig"
+
+                        kubectl apply -f deployment/k8s/apps/${APP_NAME}.yaml || echo "Apply failed - check manifest path"
+                        kubectl rollout restart deployment ${APP_NAME} || echo "Restart failed - check deployment name"
+                        kubectl rollout status deployment ${APP_NAME} --timeout=120s
+                    '''
                 }
             }
         }
