@@ -1,0 +1,234 @@
+#server:
+#  port: 9190
+#
+#spring:
+#  application:
+#    name: project-initiation-service
+#  config:
+#    import: configserver:${CONFIG_SERVER_BASE_URL:http://config.172.20.136.100.sslip.io}
+#
+#  jpa :
+#    hibernate :
+#      ddl-auto : update
+#    show-sql : true
+#    properties :
+#      hibernate :
+#        format_sql : true
+#
+#  datasource:
+#    url: ${DB_URL:jdbc:mysql://localhost:3306/startup_dbss}?createDatabaseIfNotExist=true
+#    username: ${DB_USERNAME:root}
+#    password: ${DB_PASSWORD:7012}
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#
+#  servlet :
+#    multipart :
+#      enabled : true
+#      file-size-threshold : 2KB
+#      max-file-size : 10MB
+#      max-request-size : 10MB
+#
+#rabbitmq:
+#  change-project-status-queue: change-project-status-queue
+#  change-activity-status-queue: change-activity-status-queue
+#  release-resource-queue: release-resource-queue
+#  create-resource-queue: create-project-delivery-resource-queue
+#  delete-resource-queue: delete-project-delivery-resource-queue
+#  change-resource-status-queue: change-project-delivery-resource-status-queue
+#
+#api-gateway-base-url: http://gateway.172.20.136.100.sslip.io
+
+
+
+
+
+
+
+
+#server:
+#  port: 9190
+#
+#spring:
+#  application:
+#    name: project-initiation-service
+#  config:
+#    import: optional:configserver:http://config.172.20.136.100.sslip.io
+#
+#  datasource:
+#    url: ${DB_URL:jdbc:mysql://localhost:3306/project_initiation_db?createDatabaseIfNotExist=true}
+#    username: ${DB_USERNAME:root}
+#    password: ${DB_PASSWORD:@Awoke7012}
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#
+#  jpa:
+#    hibernate:
+#      ddl-auto: update
+#    show-sql: true
+#    properties:
+#      hibernate:
+#        format_sql: true
+#
+#  servlet:
+#    multipart:
+#      enabled: true
+#      file-size-threshold: 2KB
+#      max-file-size: 10MB
+#      max-request-size: 10MB
+#
+#  output:
+#    ansi:
+#      enabled: always
+#
+#  security:
+#    oauth2:
+#      resourceserver:
+#        jwt:
+#          issuer-uri: http://keycloak.172.20.136.100.sslip.io:30282/realms/saas-erp
+#          jwk-set-uri: http://keycloak.172.20.136.100.sslip.io:30282/realms/saas-erp/protocol/openid-connect/certs
+#
+#keycloak:
+#  server-url: http://keycloak.172.20.136.100.sslip.io:30282
+#  realm: saas-erp
+#  client-id: saas-client
+#  client-secret: APHalzvUVsfz9Jffe5ZAZ1XImFwv5a8K
+#  openIdConnectUrl: ${keycloak.server-url}/realms/${keycloak.realm}/.well-known/openid-configuration
+#
+#springdoc:
+#  swagger-ui:
+#    path: /swagger
+#    oauth:
+#      client-id: ${keycloak.client-id}
+#      client-secret: ${keycloak.client-secret}
+#
+#api-gateway-base-url: http://gateway.172.20.136.100.sslip.io
+#
+#rabbitmq:
+#  change-project-status-queue: change-project-status-queue
+#  change-activity-status-queue: change-activity-status-queue
+#  release-resource-queue: release-resource-queue
+#  create-resource-queue: create-project-delivery-resource-queue
+#  delete-resource-queue: delete-project-delivery-resource-queue
+#  change-resource-status-queue: change-project-delivery-resource-status-queue
+#
+#cors:
+#  allowed-origins: "*"
+
+
+
+server:
+  port: 9190
+
+spring:
+  application:
+    name: project-initiation-service
+
+  # =====================================================
+  # CONFIG SERVER
+  # =====================================================
+  config:
+    import: optional:configserver:${CONFIG_SERVER_BASE_URL:http://config-server.default.svc.cluster.local:8888}
+
+  # =====================================================
+  # DATABASE
+  # =====================================================
+  datasource:
+    url: jdbc:mysql://localhost:3306/project_initiation_db?createDatabaseIfNotExist=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:@Awoke7012}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # =====================================================
+  # JPA
+  # =====================================================
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # =====================================================
+  # MULTIPART
+  # =====================================================
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  # =====================================================
+  # CONSOLE COLORS
+  # =====================================================
+  output:
+    ansi:
+      enabled: always
+
+  # =====================================================
+  # SECURITY (RESOURCE SERVER)
+  # =====================================================
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://172.20.136.100:30282/realms/saas-erp
+          jwk-set-uri: http://172.20.136.100:30282/realms/saas-erp/protocol/openid-connect/certs
+
+# =====================================================
+# KEYCLOAK CUSTOM
+# =====================================================
+keycloak:
+  server-url: http://172.20.136.100:30282
+  realm: saas-erp
+  client-id: saas-client
+  client-secret: APHalzvUVsfz9Jffe5ZAZ1XImFwv5a8K
+  openIdConnectUrl: ${keycloak.server-url}/realms/${keycloak.realm}/.well-known/openid-configuration
+
+# =====================================================
+# EUREKA CLIENT
+# =====================================================
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://172.20.136.100:8761/eureka/
+
+# =====================================================
+# SWAGGER / OPENAPI
+# =====================================================
+springdoc:
+  swagger-ui:
+    path: /swagger
+    oauth:
+      client-id: ${keycloak.client-id}
+      client-secret: ${keycloak.client-secret}
+
+# =====================================================
+# API GATEWAY
+# =====================================================
+api-gateway-base-url: http://gateway.172.20.136.100.sslip.io
+
+# =====================================================
+# CORS
+# =====================================================
+cors:
+  allowed-origins: "*"
+
+# =====================================================
+# RABBITMQ
+# =====================================================
+rabbitmq:
+  host: 172.20.136.100
+  port: 5672
+  username: admin
+  password: admin
+
+  change-project-status-queue: change-project-status-queue
+  change-activity-status-queue: change-activity-status-queue
+  release-resource-queue: release-resource-queue
+  create-resource-queue: create-project-delivery-resource-queue
+  delete-resource-queue: delete-project-delivery-resource-queue
+  change-resource-status-queue: change-project-delivery-resource-status-queue
