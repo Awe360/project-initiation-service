@@ -1,7 +1,8 @@
 pipeline {
-    agent {
-        label "jenkins-agent"
-    }
+//     agent {
+//         label "jenkins-agent"
+//     }
+    agent any
     tools {
         jdk 'Java21'
         maven 'Maven3'
@@ -27,7 +28,7 @@ pipeline {
         stage('Checkout SCM') {
             steps {
                 echo "Checking out ${APP_NAME} module from Git repository..."
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/dpi-saas/saas-backend'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Awe360/project-initiation-service.git'
             }
         }
 
